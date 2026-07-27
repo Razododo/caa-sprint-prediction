@@ -1,0 +1,18 @@
+# Reference environment: the exact versions on the authors' machine, verified to
+# produce the reported results. Use this file to reproduce the published numbers
+# bit for bit; use requirements.txt for ordinary use.
+#
+#   python -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements-lock.txt
+#
+# Python 3.13.3
+pandas==2.3.3
+numpy==2.2.6
+scipy==1.16.3
+scikit-learn==1.8.0
+statsmodels==0.14.5
+pyarrow==23.0.0
+PyYAML==6.0.2
+joblib==1.5.3
+matplotlib==3.10.7
+tqdm==4.67.1

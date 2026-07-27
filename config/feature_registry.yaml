@@ -1,0 +1,112 @@
+# Feature Registry — defines all features, their groups, and computation logic
+# Referenced by s05_feature_engineer.py
+
+groups:
+  trajectory_raw:
+    description: "Raw performance summary statistics"
+    features:
+      - { name: best_time_raw, type: float, desc: "Fastest 100m time (s)" }
+      - { name: mean_time_raw, type: float, desc: "Mean 100m time (s)" }
+      - { name: median_time_raw, type: float, desc: "Median 100m time (s)" }
+      - { name: sd_time_raw, type: float, desc: "SD of 100m times" }
+      - { name: cv_time_raw, type: float, desc: "Coefficient of variation" }
+      - { name: worst_time_raw, type: float, desc: "Slowest 100m time (s)" }
+      - { name: range_time_raw, type: float, desc: "Worst - best time (s)" }
+      - { name: q25_time_raw, type: float, desc: "25th percentile time (s)" }
+      - { name: q75_time_raw, type: float, desc: "75th percentile time (s)" }
+
+  trajectory_wc:
+    description: "Wind-corrected performance summary (same metrics as raw)"
+    features:
+      - { name: best_time_wc, type: float, desc: "Fastest wind-corrected 100m time" }
+      - { name: mean_time_wc, type: float, desc: "Mean wind-corrected time" }
+      - { name: median_time_wc, type: float, desc: "Median wind-corrected time" }
+      - { name: sd_time_wc, type: float, desc: "SD of wind-corrected times" }
+      - { name: cv_time_wc, type: float, desc: "CV of wind-corrected times" }
+      - { name: worst_time_wc, type: float, desc: "Slowest wind-corrected time" }
+      - { name: range_time_wc, type: float, desc: "Range of wind-corrected times" }
+      - { name: q25_time_wc, type: float, desc: "25th percentile wind-corrected" }
+      - { name: q75_time_wc, type: float, desc: "75th percentile wind-corrected" }
+
+  trajectory_dynamics:
+    description: "Temporal trajectory and improvement metrics"
+    features:
+      - { name: improvement_slope_raw, type: float, desc: "Huber slope of raw time vs age (neg=improving)" }
+      - { name: improvement_slope_wc, type: float, desc: "Huber slope of wind-corrected time vs age" }
+      - { name: improvement_residual_sd, type: float, desc: "SD of Huber residuals (consistency)" }
+      - { name: best_minus_first, type: float, desc: "First record - best record (s, pos=improved)" }
+      - { name: best_minus_latest, type: float, desc: "Latest record - best record (s)" }
+      - { name: improvement_rate_annual, type: float, desc: "best_minus_first / career_span" }
+
+  career_structure:
+    description: "Career timeline and competition exposure"
+    features:
+      - { name: n_records, type: int, desc: "Total 100m records in window" }
+      - { name: n_competitions, type: int, desc: "Distinct competition dates" }
+      - { name: n_seasons, type: int, desc: "Distinct calendar years with records" }
+      - { name: career_span_years, type: float, desc: "Last - first record date (years)" }
+      - { name: age_first_record, type: float, desc: "Age at first 100m record" }
+      - { name: age_best_record, type: float, desc: "Age at best 100m in window" }
+      - { name: records_per_year, type: float, desc: "Competition density" }
+
+  round_performance:
+    description: "Competition round information (NEW — CAA specific)"
+    features:
+      - { name: has_final, type: int, desc: "Binary: ever reached a final" }
+      - { name: n_finals, type: int, desc: "Count of final appearances" }
+      - { name: pct_finals, type: float, desc: "Proportion of records that are finals" }
+      - { name: heats_final_diff, type: float, desc: "Mean(heats time) - Mean(final time), pos=faster in finals" }
+
+  wind:
+    description: "Wind exposure covariates"
+    features:
+      - { name: wind_missing_prop, type: float, desc: "Proportion with no wind data" }
+      - { name: wind_mean, type: float, desc: "Mean wind speed" }
+      - { name: wind_sd, type: float, desc: "SD of wind speed" }
+      - { name: wind_mean_tail, type: float, desc: "Mean tailwind (positive values)" }
+      - { name: wind_mean_head, type: float, desc: "Mean headwind (negative values)" }
+
+  anthropometric:
+    description: "Body morphology features (NEW — available for subsample)"
+    features:
+      - { name: height_cm, type: float, desc: "Height in cm" }
+      - { name: weight_kg, type: float, desc: "Weight in kg" }
+      - { name: bmi, type: float, desc: "BMI = weight/(height/100)^2" }
+      - { name: height_missing, type: int, desc: "Binary: height data unavailable" }
+      - { name: weight_missing, type: int, desc: "Binary: weight data unavailable" }
+
+  era:
+    description: "Temporal context features"
+    features:
+      - { name: year_first, type: int, desc: "Calendar year of first record" }
+      - { name: year_last, type: int, desc: "Calendar year of last pre-cutoff record" }
+      - { name: year_mean, type: float, desc: "Mean calendar year" }
+      - { name: career_span_calendar, type: int, desc: "year_last - year_first" }
+      - { name: decade_first, type: int, desc: "Decade of first competition" }
+      - { name: decade_mode, type: int, desc: "Most frequent competition decade" }
+      - { name: birth_cohort_5yr, type: int, desc: "5-year birth cohort" }
+
+# Dataset variant definitions for ablation
+dataset_variants:
+  trajectory_only:
+    groups: [trajectory_raw, trajectory_dynamics, career_structure, round_performance]
+    description: "Trajectory features only (baseline)"
+  
+  traj_wind:
+    groups: [trajectory_raw, trajectory_wc, trajectory_dynamics, career_structure, round_performance, wind]
+    description: "Trajectory + wind correction + wind covariates"
+  
+  traj_anthro:
+    groups: [trajectory_raw, trajectory_dynamics, career_structure, round_performance, anthropometric]
+    description: "Trajectory + anthropometric (anthro subsample only)"
+    requires_anthro: true
+  
+  traj_wind_anthro:
+    groups: [trajectory_raw, trajectory_wc, trajectory_dynamics, career_structure, round_performance, wind, anthropometric]
+    description: "All performance features (anthro subsample only)"
+    requires_anthro: true
+  
+  all_features:
+    groups: [trajectory_raw, trajectory_wc, trajectory_dynamics, career_structure, round_performance, wind, anthropometric, era]
+    description: "All features including era"
+    requires_anthro: true

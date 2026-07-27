@@ -1,0 +1,3 @@
+sex,total,n_school,n_municipal,n_provincial,n_national,n_other,reached_school_plus,reached_provincial_plus,reached_national,school_to_provincial_pct,provincial_to_national_pct,school_to_national_pct
+Male,50371,2916,21961,16651,226,8617,41754,16877,226,40.42,1.34,0.54
+Female,6796,454,2654,2874,152,662,6134,3026,152,49.33,5.02,2.48

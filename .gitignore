@@ -1,0 +1,36 @@
+# Raw and intermediate data contain personal information (athlete names and
+# dates of birth). Never publish. Only the de-identified sample extract under
+# data/sample/ is allowed out.
+data/*
+!data/sample/
+!data/sample/**
+
+# Git does NOT expand shell brace syntax, so the two lines that used to sit
+# here ("data/{raw,interim,processed,external}/" and
+# "results/{tables,figures,raw_results}/") matched nothing at all and ignored
+# nothing. Written out explicitly below.
+data/raw/
+data/interim/
+data/processed/
+data/external/
+results/figures/
+results/raw_results/
+
+# results/tables/ is deliberately NOT ignored: the aggregate CSVs there are
+# published as part of the reproducibility package.
+
+# Duplicated working copy of the project
+caa_sprint_project 2/
+
+logs/
+*.log
+__pycache__/
+*.py[cod]
+*.pkl
+*.joblib
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+.deid_salt
+.DS_Store

@@ -1,0 +1,11 @@
+# Python 3.10+ (developed and last verified on 3.13)
+pandas>=1.5
+numpy>=1.23
+scipy>=1.9
+scikit-learn>=1.2
+statsmodels>=0.13
+pyarrow>=10.0
+PyYAML>=6.0
+joblib>=1.2
+matplotlib>=3.6
+tqdm>=4.64

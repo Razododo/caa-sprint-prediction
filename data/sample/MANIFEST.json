@@ -1,0 +1,48 @@
+{
+  "n_athletes_released": 2000,
+  "sampling": "Purposive demo sample, NOT a random sample of the cohort: Group A athletes are over-sampled so the primary analysis can be executed end to end. Do not use for inference about the CAA population.",
+  "n_group_a_per_sex": 750,
+  "n_background": 500,
+  "sampling_seed": 42,
+  "id_scheme": "sha256(secret_salt + athlete_id)[:16]",
+  "files": {
+    "group_labels_sample.csv": [
+      2000,
+      18
+    ],
+    "features_cutoff_16_sample.csv": [
+      526,
+      56
+    ],
+    "features_cutoff_18_sample.csv": [
+      1450,
+      56
+    ],
+    "features_cutoff_20_sample.csv": [
+      1667,
+      56
+    ],
+    "features_cutoff_22_sample.csv": [
+      1752,
+      56
+    ]
+  },
+  "deidentification": {
+    "dropped_columns": [
+      "athlete_name",
+      "birth_date",
+      "club",
+      "dob",
+      "last_100m_age",
+      "name",
+      "team",
+      "unit"
+    ],
+    "recoded_columns": {
+      "province": "arbitrary group code, seeded permutation, mapping not released"
+    },
+    "ages": "rounded to whole years, so a date of birth cannot be reconstructed",
+    "other_floats": "rounded to 4 decimals"
+  },
+  "condition_of_use": "No attempt may be made to re-identify any individual in this extract, or to link it to any other dataset for that purpose."
+}

@@ -1,0 +1,141 @@
+# CAA Sprint Project Configuration
+# All tunable parameters in one place — no magic numbers in code
+
+paths:
+  raw_data: data/raw/
+  interim: data/interim/
+  processed: data/processed/
+  results: results/
+  figures: results/figures/
+  tables: results/tables/
+  raw_results: results/raw_results/
+  external: data/external/
+
+# Step 1-2: Data parsing and cleaning
+inclusion:
+  min_100m_records: 2
+  min_age: 12
+  max_age: 45
+  min_time_100m: 8.0
+  max_time_100m: 20.0
+  min_time_200m: 17.0
+  max_time_200m: 40.0
+  min_time_60m: 5.5
+  max_time_60m: 12.0
+  height_range: [140, 210]
+  weight_range: [35, 120]
+
+# Step 3: Province mapping
+province:
+  # Direct province names (31 provinces + special regions)
+  direct_names:
+    - 北京
+    - 天津
+    - 河北
+    - 山西
+    - 内蒙古
+    - 辽宁
+    - 吉林
+    - 黑龙江
+    - 上海
+    - 江苏
+    - 浙江
+    - 安徽
+    - 福建
+    - 江西
+    - 山东
+    - 河南
+    - 湖北
+    - 湖南
+    - 广东
+    - 广西
+    - 海南
+    - 重庆
+    - 四川
+    - 贵州
+    - 云南
+    - 西藏
+    - 陕西
+    - 甘肃
+    - 青海
+    - 宁夏
+    - 新疆
+    - 香港
+    - 澳门
+    - 台湾
+  # Categories to flag but not map to province
+  special_categories:
+    national: ["国家队", "CHN", "中国"]
+    independent: ["个人组", "大众组"]
+
+# Step 4: Wind correction (replicate WA paper)
+wind:
+  beta_male: 0.05
+  beta_female: 0.06
+  sensitivity_range: 0.40  # ±40% perturbation for sensitivity analysis
+  sensitivity_steps: 9     # Number of beta values to test
+
+# Step 5: Feature engineering
+features:
+  cutoff_ages: [16, 17, 18, 19, 20, 21, 22, 24, 26]
+  min_records_for_slope: 3  # Minimum records needed to compute Huber slope
+  huber_epsilon: 1.35       # Default Huber regression epsilon
+
+# Step 6: Modeling
+modeling:
+  algorithms:
+    ridge:
+      alpha: 1.0
+    random_forest:
+      n_estimators: 500
+      max_features: "sqrt"
+      min_samples_leaf: 5
+      random_state: 42
+    gradient_boosting:
+      n_estimators: 100
+      max_depth: 3
+      learning_rate: 0.1
+      subsample: 1.0
+      random_state: 42
+
+  cv:
+    n_folds: 5
+    n_repeats: 500
+    random_seed: 42
+    n_repeats_quick: 20  # For debugging
+    n_jobs: 4  # 4进程；若报 PermissionError 改回 1
+
+  # Era-disjoint splits (CAA data: 2002–2026)
+  era_splits:
+    - { train_end: 2009, test_start: 2010, test_end: 2016, label: "train≤2009_test2010-2016" }
+    - { train_end: 2012, test_start: 2013, test_end: 2019, label: "train≤2012_test2013-2019" }
+    - { train_end: 2015, test_start: 2016, test_end: 2022, label: "train≤2015_test2016-2022" }
+    - { train_end: 2018, test_start: 2019, test_end: 2026, label: "train≤2018_test2019+" }
+
+# Step 7: Anthropometric analysis
+anthropometric:
+  min_subsample_for_analysis: 200  # Minimum to run anthro models
+  bmi_range: [14, 35]              # Valid BMI range
+
+# Step 8: Robustness checks
+robustness:
+  career_completion_cutoff_year: 2022  # No records after this year
+  parsimonious_features:
+    minimal: ["best_time_raw", "improvement_slope"]
+    compact: ["best_time_raw", "improvement_slope", "n_records", "career_span_years"]
+  hyperparam_tuning:
+    n_iter: 50
+    cv_folds: 5
+
+# Plotting
+plotting:
+  figsize_single: [6, 4]
+  figsize_double: [10, 4]
+  figsize_quad: [10, 8]
+  dpi: 300
+  color_male: "#1f77b4"
+  color_female: "#d62728"
+  color_wa_male: "#aec7e8"      # Lighter versions for WA overlay
+  color_wa_female: "#ff9896"
+  font_size: 10
+  save_formats: ["pdf", "png"]
