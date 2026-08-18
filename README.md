@@ -43,6 +43,7 @@ unstable for females in both the sample and the full cohort.
 |---|---|
 | `src/s01`–`s15` | Full pipeline: parsing, cleaning, province mapping, wind correction, feature engineering, modelling, robustness, figures |
 | `s16_sensitivity_dk.py`, `redraw_figures_*.py` | Revision-stage sensitivity analyses and figure scripts, run from the project root |
+| `r4_reanalysis/` | Analyses added at peer review, plus `gate_reproduce.py`, which checks that an installation reproduces the published estimates (see Environment) |
 | `src/utils/` | `features.py` (feature definitions), `validation.py` (CV strategies), `io.py` |
 | `config/config.yaml` | Every tunable parameter, including `random_seed: 42`, cutoff ages, model hyperparameters, era splits |
 | `config/feature_registry.yaml` | Feature groups and dataset variants |
@@ -101,6 +102,27 @@ python redraw_figures_2_3.py            # figures 2–3
 python redraw_figures_4_5.py            # figures 4–5
 ```
 
+The analyses added at peer review live in `r4_reanalysis/` and are also run from
+the project root. They need the full processed dataset and exit with an
+explanatory message without it, as the two scripts described above do. Run the
+gate first: it refits one published cell and compares it with
+`results/tables/table2_group_a_performance.csv`, so a failure means the
+installation does not reproduce the paper and nothing downstream would be
+comparable with the published tables.
+
+```bash
+python r4_reanalysis/gate_reproduce.py --full        # must print GATE PASSED
+python r4_reanalysis/r4_02_carry_forward.py          # carry-forward baseline
+python r4_reanalysis/r4_03_overlap_split.py          # predictor-outcome identity removed
+python r4_reanalysis/r4_05_attrition_censoring.py    # attrition under follow-up requirements
+python r4_reanalysis/r4_06_paired_delta_r2.py        # paired CIs for R² differences
+python r4_reanalysis/r4_78_sensitivity.py --mode hurdles
+python r4_reanalysis/r4_78_sensitivity.py --mode wind
+```
+
+Each of these recomputes the published baseline in the same run and checks it
+against the published table before reporting any new estimate.
+
 The two figure scripts resolve their paths relative to the script file and
 write to `results/figures/`. `redraw_figures_2_3.py` runs against
 `results/tables/composition_decomposition.csv`, which is included here.
@@ -124,12 +146,22 @@ target is the lifetime personal best. A random K-fold split over rows is
 therefore a split over athletes, and no athlete contributes to both a training
 and a test fold.
 
-**Group A versus all athletes.** Group A comprises athletes who had not yet
-achieved their lifetime personal best at the cutoff age. Group B athletes
-already had, which makes their target near-trivially predictable from the
-pre-cutoff features and inflates R². The paper's primary analysis is restricted
-to Group A; `scripts/demo_reproduce.py --group all` shows the inflated estimate
-for comparison.
+**Group A versus all athletes.** Group A comprises athletes with at least one
+100 m record *after* the cutoff age, that is those whose competitive career
+continued past it (`src/s10_group_split.py`). Group B athletes have no record
+after the cutoff, so their lifetime best is already fixed inside the pre-cutoff
+window and is near-trivially predictable from the pre-cutoff features, which
+inflates R². Athletes with fewer than two pre-cutoff records are excluded from
+both. The paper's primary analysis is restricted to Group A;
+`scripts/demo_reproduce.py --group all` shows the inflated estimate for
+comparison.
+
+Career continuation does not by itself guarantee that the lifetime best is set
+after the cutoff. For 22.7% to 46.2% of Group A, depending on sex and cutoff
+age, the lifetime best is one of the pre-cutoff races, so the target equals the
+feature `best_time_raw` exactly and the model is evaluating an identity rather
+than predicting. `r4_reanalysis/r4_03_overlap_split.py` quantifies that share and
+refits the published specification with those athletes removed.
 
 **No leakage across the cutoff.** At cutoff age X only records with
 `age_at_comp <= X` enter feature computation, while the target is the lifetime
@@ -159,6 +191,19 @@ decimal places:
 | Male | GradientBoosting | 0.785 | 0.785 |
 | Female | RandomForest | 0.629 | 0.629 |
 | Female | GradientBoosting | 0.616 | 0.616 |
+
+**Verifying an installation against the published estimates.** The table above is
+computed on the demo sample, so it demonstrates version stability rather than
+agreement with the paper. `r4_reanalysis/gate_reproduce.py` makes the stronger
+check available to anyone with access to the full processed dataset: it rebuilds
+the Group A feature matrix for cutoff age 16 (male, `traj_wind`) from scratch and
+compares the resulting R², both confidence limits and RMSE with the values stored
+in `results/tables/table2_group_a_performance.csv`.
+
+In a third environment, Python 3.11.15 with pandas 3.0.2, NumPy 2.4.4,
+SciPy 1.17.1, scikit-learn 1.8.0, statsmodels 0.14.6 and joblib 1.5.3, the gate
+reproduced Ridge to within 6e-14 and GradientBoosting to within 1.2e-08, with the
+confidence limits identical. Both are floating-point noise.
 
 The only difference anywhere in the two outputs was the upper bound of one
 percentile interval across cross-validation folds (female RandomForest: 0.763 in

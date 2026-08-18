@@ -1,21 +1,28 @@
-"""Redraw Figures 2 and 3 so that they match the manuscript captions exactly.
+"""Redraw Figures 2 and 3 to match the revised manuscript captions.
 
-  Fig 2  World Athletics series drawn as a DASHED line with TRIANGLE markers
-         (caption: "dashed lines with triangles represent World Athletics (WA)
-         reference values"). Group B is a plain dotted line with no marker
-         (caption: "dotted lines near 1.0"), so the triangle is unambiguous.
-  Fig 2  Group A percentages along the bottom of each panel (caption:
-         "Percentages at the bottom indicate the proportion of Group A
-         athletes at each cutoff age").
-  Fig 3  World Athletics series likewise dashed with triangle markers.
+Revision note. Earlier versions of this script drew a World Athletics reference
+series as a dashed line with triangle markers, and carried that series as a
+hard-coded WA_CURVE dictionary. Following Reviewer 4's third major comment the
+quantitative World Athletics comparison has been removed from the manuscript,
+so the series, the legend entry and the hard-coded values are removed here as
+well. Leaving them in the script would have kept the removed numbers in the
+public repository.
 
-WA reference series = the 500-repeat cutoff-curve sweep of the World Athletics
-data (cutoff ages 16-26, GradientBoosting, random 5-fold CV). The same numbers
-are carried in the `wa_r2` column of results/tables/composition_decomposition.csv
-and in WA_REF inside src/diagnostic_r2_inflation.py; WA_CURVE below is kept
-explicit so the figure can be redrawn from the shipped table alone.
+Figure 2  Full sample, Group A and Group B R² across cutoff ages 16 to 26, with
+          the shaded band showing the full-sample minus Group A difference and
+          the Group A percentage of the full sample along the bottom axis.
+
+Figure 3  Group A R² across cutoff ages 16 to 22 under the published outcome
+          (lifetime personal best), together with the prospective outcome
+          (best performance strictly after the cutoff) at the three primary
+          cutoffs. Showing both series makes the effect of the outcome
+          definition visible in the figure rather than only in the text.
 
 Input:   results/tables/composition_decomposition.csv
+         results/tables/r4_post_cutoff_outcome.csv    (Figure 3 prospective series)
+         results/tables/group_a_cutoff_sweep.csv      (Figure 3 lifetime-PB series;
+             falls back to results/raw_results/controlled_analysis/group_a_results.csv,
+             which is the same file under its working-tree name)
 Output:  results/figures/Figure{2,3}_redraw.{png,pdf}
 Run:     python redraw_figures_2_3.py
 """
@@ -29,6 +36,18 @@ import matplotlib.pyplot as plt
 
 HERE = Path(__file__).resolve().parent
 CSV = HERE / "results" / "tables" / "composition_decomposition.csv"
+POST = HERE / "results" / "tables" / "r4_post_cutoff_outcome.csv"
+
+# Figure 3 needs the Group A cutoff sweep at ages 16 to 22. In the working tree
+# that series lives with the rest of the s11 output under results/raw_results/,
+# which the public repository does not ship. A copy of the same file is kept in
+# results/tables/, which is shipped, so the figure can be redrawn from the
+# published package alone. Prefer the published copy and fall back to the raw
+# one, so that the script is byte-identical in both repositories.
+GA_PUBLISHED = HERE / "results" / "tables" / "group_a_cutoff_sweep.csv"
+GA_RAW = HERE / "results" / "raw_results" / "controlled_analysis" / "group_a_results.csv"
+GA = GA_PUBLISHED if GA_PUBLISHED.exists() else GA_RAW
+
 OUT = HERE / "results" / "figures"
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -48,21 +67,43 @@ def get(sex, cuts, key):
     return np.array(out, dtype=float)
 
 
-WA_CURVE = {
-    "Male":   {16: 0.0403, 17: 0.2698, 18: 0.4306, 19: 0.4700, 20: 0.5576, 21: 0.6624,
-               22: 0.7563, 23: 0.8250, 24: 0.8787, 25: 0.9119, 26: 0.9408},
-    "Female": {16: 0.1980, 17: 0.2614, 18: 0.3553, 19: 0.4136, 20: 0.5074, 21: 0.6188,
-               22: 0.7246, 23: 0.7842, 24: 0.8346, 25: 0.8728, 26: 0.8982},
-}
+def group_a_main(sex, cuts, key="R2_mean"):
+    """Group A series from the same s11 run that produced Main Table 2.
+
+    Figure 3 must not be drawn from composition_decomposition.csv: that file's
+    r2_A_true_pred column comes from the diagnostic script, which uses a reduced
+    feature set and a different seed base, so it differs from Main Table 2 by up
+    to 0.036. The rows below reproduce Main Table 2 exactly at cutoffs 16 to 18
+    and extend the same specification to 19 to 22 at 100 repeats.
+    """
+    if not GA.exists():
+        raise SystemExit(f"missing input table: {GA}")
+    with open(GA, newline="") as fh:
+        gr = [r for r in csv.DictReader(fh)
+              if r["variant"] == "traj_wind" and r["model"] == "GradientBoosting"
+              and r["cv_strategy"] == "random"]
+    m = {(r["sex"], int(float(r["cutoff_age"]))): r for r in gr}
+    out = []
+    for c in cuts:
+        r = m.get((sex, c))
+        out.append(float(r[key]) if r and r.get(key) not in ("", None) else np.nan)
+    return np.array(out, dtype=float)
 
 
-def wa_line(sex, cuts):
-    return np.array([WA_CURVE[sex].get(c, np.nan) for c in cuts], dtype=float)
+def post_cutoff(sex, cuts):
+    """Prospective-outcome R², Gradient Boosting. NaN where not computed."""
+    if not POST.exists():
+        return np.full(len(cuts), np.nan)
+    with open(POST, newline="") as fh:
+        pr = [r for r in csv.DictReader(fh)
+              if r["model"] == "GradientBoosting" and r["outcome"] == "pb_post_cutoff"]
+    m = {(r["sex"], int(r["cutoff_age"])): float(r["R2_mean"]) for r in pr}
+    return np.array([m.get((sex, c), np.nan) for c in cuts], dtype=float)
 
 
 plt.rcParams.update({"font.size": 9, "font.family": "DejaVu Sans",
                      "axes.linewidth": 0.8, "legend.frameon": False})
-C_FULL = "#0072B2"; C_A = "#D55E00"; C_B = "#009E73"; C_WA = "#CC79A7"
+C_FULL = "#0072B2"; C_A = "#D55E00"; C_B = "#009E73"; C_POST = "#56B4E9"
 
 # ------------------------------------------------------------------ FIGURE 2
 fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.4), sharey=True)
@@ -73,7 +114,6 @@ for ax, (sex, lab) in zip(axes, [("Male", "(A) Male"), ("Female", "(B) Female")]
     ga = get(sex, cuts, "r2_A_true_pred")
     gb = get(sex, cuts, "r2_B_trivial")
     pct = get(sex, cuts, "pct_A")
-    wa = wa_line(sex, cuts)
 
     ax.fill_between(cx, ga, full, color="0.86", zorder=0)
     ax.plot(cx, full, color=C_FULL, ls="-", marker="o", ms=4, lw=1.6,
@@ -81,11 +121,7 @@ for ax, (sex, lab) in zip(axes, [("Male", "(A) Male"), ("Female", "(B) Female")]
     ax.plot(cx, ga, color=C_A, ls="--", marker="s", ms=4, lw=1.6, mfc="white",
             label="Group A (continuing)")
     ax.plot(cx, gb, color=C_B, ls=":", lw=1.4, label="Group B (career-ended)")
-    mwa = np.isfinite(wa)
-    ax.plot(cx[mwa], wa[mwa], color=C_WA, ls="--", marker="^", ms=4, lw=1.4,
-            label="World Athletics ref.")
 
-    # Group A percentages along the bottom
     for c, p in zip(cuts, pct):
         if not np.isfinite(p):
             continue
@@ -115,22 +151,23 @@ fig, axes = plt.subplots(1, 2, figsize=(7.2, 3.3), sharey=True)
 for ax, (sex, lab) in zip(axes, [("Male", "(A) Male"), ("Female", "(B) Female")]):
     cuts = list(range(16, 23))
     cx = np.array(cuts, dtype=float)
-    ga = get(sex, cuts, "r2_A_true_pred")
-    lo = get(sex, cuts, "r2_A_ci_lo")
-    hi = get(sex, cuts, "r2_A_ci_hi")
-    nA = get(sex, cuts, "n_A")
-    wa = wa_line(sex, cuts)
+    ga = group_a_main(sex, cuts, "R2_mean")
+    lo = group_a_main(sex, cuts, "R2_ci_lo")
+    hi = group_a_main(sex, cuts, "R2_ci_hi")
+    nA = group_a_main(sex, cuts, "n_samples")
+    pc = post_cutoff(sex, cuts)
 
     ax.fill_between(cx, lo, hi, color=C_A, alpha=0.15, zorder=0)
     prim = cx <= 18
     supp = cx >= 18
     ax.plot(cx[supp], ga[supp], color=C_A, ls="--", lw=1.2, marker="s", ms=4,
-            mfc=C_A, label="Group A R² (suppl. 19–22)")
+            mfc=C_A, label="Lifetime PB, suppl. 19-22")
     ax.plot(cx[prim], ga[prim], color=C_A, ls="-", lw=2.2, marker="s", ms=5,
-            mfc="white", label="Group A R² (primary 16–18)")
-    mwa = np.isfinite(wa)
-    ax.plot(cx[mwa], wa[mwa], color=C_WA, ls="--", marker="^", ms=4, lw=1.4,
-            label="World Athletics ref.")
+            mfc="white", label="Lifetime PB, primary 16-18")
+    mp = np.isfinite(pc)
+    if mp.any():
+        ax.plot(cx[mp], pc[mp], color=C_POST, ls="-", lw=2.0, marker="D", ms=4.5,
+                mfc="white", label="Post-cutoff best, 16-18")
     for c, y, n in zip(cuts, ga, nA):
         ax.annotate(f"n={int(n)}", (c, y), textcoords="offset points",
                     xytext=(0, 9), ha="center", fontsize=6, color="0.35")
@@ -144,8 +181,9 @@ for ax, (sex, lab) in zip(axes, [("Male", "(A) Male"), ("Female", "(B) Female")]
 
 axes[0].set_ylabel("Cross-validated R² (Group A)")
 h, l = axes[0].get_legend_handles_labels()
-o = [l.index("Group A R² (primary 16–18)"), l.index("Group A R² (suppl. 19–22)"),
-     l.index("World Athletics ref.")]
+order = ["Lifetime PB, primary 16-18", "Lifetime PB, suppl. 19-22",
+         "Post-cutoff best, 16-18"]
+o = [l.index(x) for x in order if x in l]
 axes[0].legend([h[i] for i in o], [l[i] for i in o], loc="lower right",
                fontsize=6.8, borderpad=0.3, labelspacing=0.35)
 fig.tight_layout()
