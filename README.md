@@ -27,15 +27,15 @@ values reported in the paper, which were computed on the full cohort:
 
 | Sex | Model | Sample (this repo) | Published (full cohort) |
 |---|---|---|---|
-| Male | Ridge | R² = 0.793 (n = 475) | R² = 0.803 (n = 2,662) |
-| Male | RandomForest | R² = 0.780 | R² = 0.796 |
-| Male | GradientBoosting | R² = 0.785 | R² = 0.799 |
-| Female | RandomForest | R² = 0.629 (n = 369) | R² = 0.624 (n = 522) |
-| Female | GradientBoosting | R² = 0.616 | R² = 0.644 |
+| Male | Ridge | R² = 0.790 (n = 463) | R² = 0.803 (n = 2,662) |
+| Male | RandomForest | R² = 0.777 | R² = 0.796 |
+| Male | GradientBoosting | R² = 0.772 | R² = 0.799 |
+| Female | Ridge | R² = 0.760 (n = 356) | R² = 0.780 (n = 445) |
+| Female | RandomForest | R² = 0.743 | R² = 0.754 |
+| Female | GradientBoosting | R² = 0.727 | R² = 0.738 |
 
 The sample reproduces the substantive result but not the exact point estimates:
-it contains a fraction of the cohort, so estimates are noisier. Ridge is
-unstable for females in both the sample and the full cohort.
+it contains a fraction of the cohort, so estimates are noisier.
 
 ## What is in this repository
 

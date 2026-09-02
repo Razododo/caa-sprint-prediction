@@ -103,7 +103,7 @@ modeling:
     n_repeats: 500
     random_seed: 42
     n_repeats_quick: 20  # For debugging
-    n_jobs: 4  # 4进程；若报 PermissionError 改回 1
+    n_jobs: 8  # 并行进程数；只影响速度，不影响任何数值（random_cv 每个 repeat 种子固定为 random_seed+i，joblib 保序返回）。若报 PermissionError 改回 4 或 1
 
   # Era-disjoint splits (CAA data: 2002–2026)
   era_splits:

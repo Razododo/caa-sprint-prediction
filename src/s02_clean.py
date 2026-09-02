@@ -8,6 +8,7 @@ Output: data/interim/cleaned_records.parquet (updated records with age, round_ty
 
 Cleaning steps:
 1. Remove records with invalid times (NaN, ≤0, or outside physiological range)
+1b. Remove 100 m hurdles records mis-filed under event == "100m"
 2. Remove athletes without DOB
 3. Compute age_at_comp = (competition_date - dob) / 365.25
 4. Remove records where age < 12 or age > 45
@@ -83,6 +84,22 @@ def main() -> None:
         combined = combined & m
     df_rec = df_rec[combined].copy()
     cleaning_log["after_physio_range"] = len(df_rec)
+
+    # --- Step 1b: Remove 100 m hurdles records mis-filed under event == "100m" ---
+    # Their event_full names a hurdles event (contains the character 栏, e.g.
+    # "女子100米栏决赛") and their times, 11.08 to 19.98 s, all fall inside the
+    # 100 m validity range, so no other filter removes them. They are a different
+    # event and are excluded here, in response to Reviewer 4, round 3.
+    hurdles = (
+        (df_rec["event"] == "100m")
+        & df_rec["event_full"].astype(str).str.contains("栏", na=False)
+    )
+    cleaning_log["hurdles_100m_removed"] = int(hurdles.sum())
+    cleaning_log["hurdles_100m_athletes"] = int(
+        df_rec.loc[hurdles, "athlete_id"].nunique()
+    )
+    df_rec = df_rec[~hurdles].copy()
+    cleaning_log["after_remove_100m_hurdles"] = len(df_rec)
 
     # --- Step 2: Remove athletes without DOB ---
     athletes_with_dob = set(df_ath.loc[df_ath["dob"].notna(), "athlete_id"])

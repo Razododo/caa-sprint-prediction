@@ -350,6 +350,13 @@ def main():
     logger.info("Loading data...")
     records = read_parquet(interim / "cleaned_records.parquet")
     athletes = read_parquet(interim / "parsed_athletes.parquet")
+    _n0 = len(athletes)
+    athletes = athletes.drop_duplicates(subset="athlete_id", keep="first")
+    if len(athletes) != _n0:
+        logger.warning(
+            f"parsed_athletes: dropped {_n0 - len(athletes):,} duplicate "
+            f"athlete_id rows ({_n0:,} -> {len(athletes):,})"
+        )
 
     # Filter to 100m only
     records_100m = records[records["event"] == "100m"].copy()

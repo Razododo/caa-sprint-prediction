@@ -72,6 +72,18 @@ def main() -> None:
     # ------------------------------------------------------------------
     # height_cm=0 and weight_kg=0 → NaN (safety; s01 already does this)
     parsed_ath = parsed_ath.copy()
+    # The April re-parse of parsed_athletes.parquet introduced duplicate
+    # athlete_id rows (72,244 rows for 72,224 unique ids). A duplicated index
+    # makes ath_meta.at[aid, ...] return a Series rather than a scalar, which
+    # the published run never hit because that run predates the re-parse.
+    # Keep the first row per athlete so the index is unique.
+    _n_before = len(parsed_ath)
+    parsed_ath = parsed_ath.drop_duplicates(subset="athlete_id", keep="first")
+    if len(parsed_ath) != _n_before:
+        logger.warning(
+            f"parsed_athletes: dropped {_n_before - len(parsed_ath):,} duplicate "
+            f"athlete_id rows ({_n_before:,} -> {len(parsed_ath):,})"
+        )
     parsed_ath.loc[parsed_ath["height_cm"] == 0, "height_cm"] = np.nan
     parsed_ath.loc[parsed_ath["weight_kg"] == 0, "weight_kg"] = np.nan
 

@@ -9,3 +9,9 @@ PyYAML>=6.0
 joblib>=1.2
 matplotlib>=3.6
 tqdm>=4.64
+
+# Only needed to regenerate Supplementary Table S4 (comparison of boosting
+# frameworks). The main pipeline does not import these. On macOS both require
+# the OpenMP runtime: brew install libomp
+xgboost>=2.0
+lightgbm>=4.0
