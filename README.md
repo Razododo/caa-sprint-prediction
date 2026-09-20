@@ -12,6 +12,16 @@ fixes every random seed and hyperparameter, the aggregate result tables reported
 in the paper, and a de-identified sample dataset that lets anyone execute the
 modelling code without access to personal data.
 
+## Citation
+
+Huang W, Zhou H. Sprint performance prediction in a national-level database of 58,000
+athletes: developmental patterns, population composition effects, and the role of
+anthropometric features. BMC Sports Sci Med Rehabil. 2026.
+https://doi.org/10.1186/s13102-026-02099-5
+
+This repository contains the analysis code and a de-identified demonstration extract
+for that article. Released under the MIT License.
+
 ## Quick start
 
 ```bash
@@ -210,11 +220,6 @@ percentile interval across cross-validation folds (female RandomForest: 0.763 in
 the reference environment, 0.762 in the clean environment). That reflects
 floating-point summation order across library versions and is more than two
 orders of magnitude smaller than the width of the interval itself.
-
-## Citation
-
-If you use this code, please cite the paper and the archived release. Once the
-Zenodo DOI is issued, replace the placeholder in the badge above.
 
 ## License
 
