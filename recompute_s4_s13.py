@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-补充表 S4(三种 boosting 框架对比)与 S13(省份组)重算。
+Recompute Supplementary Table S4 (comparison of boosting frameworks) and
+Supplementary Table S13 (province groups entering GroupKFold).
 
-用法(项目根目录):
+Usage (from the project root):
     python recompute_s4_s13.py
 
-S13 不需要额外依赖,先跑;S4 需要 xgboost 和 lightgbm,缺了会跳过并给出安装命令,
-不会中断 S13 的输出。
+S13 needs no additional dependencies and is computed first. S4 requires xgboost
+and lightgbm; if either is missing the script prints the install command and
+skips S4 without interrupting the S13 output.
 
-S4 说明:原表用的重复次数与主表不同(GB 那列是 0.609 / 0.799 / 0.647,主表是
-0.606 / 0.799 / 0.644),而且 xgboost 与 lightgbm 不在 requirements 里,原脚本
-也没留在仓库中。这里统一改成与主表相同的 500 次重复、相同的 KFold 种子、相同的
-中位数插补管道,所以重算后 S4 的 GB 那列应当与主表逐位相同 —— 这就成了这张表
-自带的复现检验。
+S4 uses the same protocol as Main Table 2: 500 repeats of 5-fold cross-validation,
+the same KFold seeds, and the same median-imputation pipeline. The Gradient
+Boosting column of S4 therefore reproduces Main Table 2 digit for digit, and that
+agreement serves as the table's own reproducibility check.
+
+Requires the full processed dataset, which is not distributed with this repository.
 """
 import sys
 from pathlib import Path
@@ -48,11 +51,11 @@ n_rep = config["modeling"]["cv"]["n_repeats"]
 n_jobs = config["modeling"]["cv"].get("n_jobs", 1)
 registry = s11.load_feature_registry()
 
-print(f"记录 {len(records):,} | 100 m {len(rec_100m):,} | group_labels {len(gl):,}")
-print(f"CV: {n_folds} 折 × {n_rep} 次重复, seed={seed}, n_jobs={n_jobs}\n")
+print(f"records {len(records):,} | 100 m {len(rec_100m):,} | group_labels {len(gl):,}")
+print(f"CV: {n_folds} folds x {n_rep} repeats, seed={seed}, n_jobs={n_jobs}\n")
 
 # ======================================================================
-# S13:省份组
+# S13: province groups
 # ======================================================================
 print("=" * 78)
 print("Supplementary Table S13")
@@ -70,13 +73,13 @@ for cutoff, sx, lab in ALL_CELLS:
                        n_in_validation=int(kept.sum())))
 s13 = pd.DataFrame(rows13)
 print(s13.to_string(index=False))
-print("\n（已发表值：男 30/30/31 与女 30/31/30 省份数；组数 24/25/28 与 23/25/25；"
-      "验证人数 794/2366/2175 与 396/584/470）")
+print("\n(Published values: 30/30/31 provinces for males and 30/31/30 for females; "
+      "24/25/28 and 23/25/25 groups; 794/2366/2175 and 396/584/470 athletes in validation)")
 s13.to_csv("results/tables/s13_province_groups.csv", index=False)
 print("-> results/tables/s13_province_groups.csv\n")
 
 # ======================================================================
-# S4:三种 boosting 框架
+# S4: three boosting frameworks
 # ======================================================================
 print("=" * 78)
 print("Supplementary Table S4")
@@ -91,16 +94,17 @@ try:
 except ImportError:
     missing.append("lightgbm")
 if missing:
-    print("缺少依赖:" + ", ".join(missing))
-    print("装上再跑这一段:  pip install " + " ".join(missing))
-    print("(S13 已经算好了,上面的结果可以直接用。)")
+    print("Missing dependencies: " + ", ".join(missing))
+    print("Install them and re-run for S4:  pip install " + " ".join(missing))
+    print("(S13 above is already complete and can be used as printed.)")
     sys.exit(0)
 
 gb_params = config["modeling"]["algorithms"]["gradient_boosting"]
 n_est = gb_params["n_estimators"]
 depth = gb_params["max_depth"]
 lr = gb_params["learning_rate"]
-print(f"三个框架统一设置:n_estimators={n_est}, max_depth={depth}, learning_rate={lr}\n")
+print(f"Shared settings for all three frameworks: n_estimators={n_est}, "
+      f"max_depth={depth}, learning_rate={lr}\n")
 
 
 def imp(m):
@@ -139,17 +143,18 @@ s4 = pd.DataFrame(rows4)
 s4.to_csv("results/tables/s4_algorithm_comparison.csv", index=False)
 print("\n-> results/tables/s4_algorithm_comparison.csv")
 
-# 自检:GB 那列必须与主表逐位相同
-print("\n自检:GB 列对主表")
+# Self-check: the GB column must match Main Table 2 digit for digit.
+print("\nSelf-check: GB column against Main Table 2")
 t2 = pd.read_csv("results/tables/table2_group_a_performance.csv")
 t2 = t2[(t2.variant == VARIANT) & (t2.model == "GradientBoosting") & (t2.cv_strategy == "random")]
 ok = True
 for r in rows4:
     pub = t2[(t2.cutoff_age == r["cutoff"]) & (t2.sex == r["sex"])]["R2_mean"].iloc[0]
     d = abs(pub - r["GradientBoosting_raw"])
-    flag = "" if d < 1e-9 else "   <-- 对不上"
+    flag = "" if d < 1e-9 else "   <-- mismatch"
     if d >= 1e-9:
         ok = False
-    print(f"  {r['sex']} {r['cutoff']}: 这里 {r['GradientBoosting_raw']:.6f} | "
-          f"主表 {pub:.6f} | 差 {d:.2e}{flag}")
-print("\n" + ("GB 列与主表完全一致,S4 可用" if ok else "GB 列与主表不一致,先别用这批数"))
+    print(f"  {r['sex']} {r['cutoff']}: here {r['GradientBoosting_raw']:.6f} | "
+          f"Main Table 2 {pub:.6f} | diff {d:.2e}{flag}")
+print("\n" + ("GB column matches Main Table 2 exactly; S4 is usable" if ok
+              else "GB column does not match Main Table 2; do not use these values"))
