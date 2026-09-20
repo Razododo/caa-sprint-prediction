@@ -1,8 +1,5 @@
 # Predicting lifetime 100 m personal bests from junior competition trajectories (CAA cohort)
 
-<!-- After creating the Zenodo release, replace the line below with the DOI badge Zenodo gives you. -->
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
-
 Feature-engineering and modelling code for a study of whether junior sprint
 performance trajectories predict lifetime 100 m personal bests, using
 competition records published by the Chinese Athletics Association (CAA).
